@@ -19,6 +19,19 @@
   --sidebar-w: 240px;
 }
 
+body[data-theme="light"] {
+  --bg: #f8fafc;
+  --bg2: #ffffff;
+  --bg3: #f1f5f9;
+  --border: rgba(0,0,0,0.08);
+  --border2: rgba(0,0,0,0.15);
+  --text: #0f172a;
+  --text2: #475569;
+  --text3: #94a3b8;
+  --green-dim: #dcfce7;
+  --amber-dim: #fef3c7;
+}
+
 body {
   font-family: 'DM Sans', sans-serif;
   background: var(--bg);
@@ -107,7 +120,7 @@ body {
 .topbar-stat-num { font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 600; color: var(--text); }
 .topbar-stat-lbl { font-size: 10px; color: var(--text3); }
 
-.map-container { flex: 1; position: relative; overflow: hidden; background: #0d1520; }
+.map-container { flex: 1; position: relative; overflow: hidden; background: var(--bg); }
 .map-container svg { width: 100%; height: 100%; }
 
 .map-tooltip {
