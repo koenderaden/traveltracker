@@ -6,15 +6,47 @@ import { ID_TO_COUNTRY } from "../data/countries";
 const TOPO_URL =
   "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json";
 
+const CONTINENT_COLORS = {
+  Europa: { fill: "#3b82f6", stroke: "#2563eb", visited: "#60a5fa" },
+  Azië: { fill: "#a855f7", stroke: "#9333ea", visited: "#c084fc" },
+  Afrika: { fill: "#f97316", stroke: "#ea580c", visited: "#fb923c" },
+  "Noord-Amerika": { fill: "#06b6d4", stroke: "#0891b2", visited: "#22d3ee" },
+  "Zuid-Amerika": { fill: "#10b981", stroke: "#059669", visited: "#34d399" },
+  Oceanië: { fill: "#f59e0b", stroke: "#d97706", visited: "#fbbf24" },
+};
+
+const BUCKET_COLOR = { fill: "#fbbf24", stroke: "#f59e0b" };
+const DEFAULT_COLOR = { fill: "#1e2d42", stroke: "#0d1520" };
+const DEFAULT_COLOR_LIGHT = { fill: "#cbd5e1", stroke: "#94a3b8" };
+
+function playSound() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.connect(g);
+    g.connect(ctx.destination);
+    o.frequency.setValueAtTime(520, ctx.currentTime);
+    o.frequency.exponentialRampToValueAtTime(780, ctx.currentTime + 0.1);
+    g.gain.setValueAtTime(0.3, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+    o.start(ctx.currentTime);
+    o.stop(ctx.currentTime + 0.3);
+  } catch (e) {}
+}
+
 export default function WorldMap({
   visited,
   bucketlist,
   highlighted,
   toggleVisited,
   toggleBucket,
+  darkMode,
 }) {
   const svgRef = useRef(null);
   const gRef = useRef(null);
+  const zoomRef = useRef(null);
+  const featuresRef = useRef([]);
   const [ctx, setCtx] = useState(null);
   const [tooltip, setTooltip] = useState(null);
 
@@ -39,12 +71,14 @@ export default function WorldMap({
       .scaleExtent([1, 8])
       .on("zoom", (e) => g.attr("transform", e.transform));
     svg.call(zoom);
+    zoomRef.current = zoom;
 
     d3.json(TOPO_URL).then((world) => {
       const features = topojson.feature(
         world,
         world.objects.countries
       ).features;
+      featuresRef.current = features;
 
       g.selectAll("path.country-path")
         .data(features)
@@ -72,60 +106,98 @@ export default function WorldMap({
           const id = String(d.id).padStart(3, "0");
           const country = ID_TO_COUNTRY[id];
           if (!country) return;
+
           const rect = svgRef.current.getBoundingClientRect();
           setCtx({
             name: country.name,
             flag: country.flag,
-            x: Math.min(event.clientX - rect.left, rect.width - 180),
-            y: Math.min(event.clientY - rect.top, rect.height - 150),
+            x: Math.min(event.clientX - rect.left, rect.width - 200),
+            y: Math.min(event.clientY - rect.top, rect.height - 120),
           });
           setTooltip(null);
+
+          const bounds = path.bounds(d);
+          const dx = bounds[1][0] - bounds[0][0];
+          const dy = bounds[1][1] - bounds[0][1];
+          const x = (bounds[0][0] + bounds[1][0]) / 2;
+          const y = (bounds[0][1] + bounds[1][1]) / 2;
+          const scale = Math.max(
+            1,
+            Math.min(6, 0.9 / Math.max(dx / rect.width, dy / rect.height))
+          );
+          const translate = [
+            rect.width / 2 - scale * x,
+            rect.height / 2 - scale * y,
+          ];
+
+          svg
+            .transition()
+            .duration(600)
+            .call(
+              zoom.transform,
+              d3.zoomIdentity.translate(translate[0], translate[1]).scale(scale)
+            );
         });
 
-      updateStyles(features, visited, bucketlist, highlighted, g);
+      updateStyles(features, visited, bucketlist, highlighted, g, darkMode);
     });
 
     svg.on("click", () => setCtx(null));
   }, []);
 
   useEffect(() => {
-    if (!gRef.current) return;
-    const features = gRef.current.g.selectAll("path.country-path").data();
-    updateStyles(features, visited, bucketlist, highlighted, gRef.current.g);
-  }, [visited, bucketlist, highlighted]);
+    if (!gRef.current || featuresRef.current.length === 0) return;
+    updateStyles(
+      featuresRef.current,
+      visited,
+      bucketlist,
+      highlighted,
+      gRef.current.g,
+      darkMode
+    );
+  }, [visited, bucketlist, highlighted, darkMode]);
 
-  function updateStyles(features, vis, buck, hl, g) {
+  function getColor(name, vis, buck, hl, dark) {
+    if (hl === name) return { fill: "#60a5fa", stroke: "#93c5fd" };
+    if (buck.includes(name)) return BUCKET_COLOR;
+    if (vis.includes(name)) {
+      const country = Object.values(ID_TO_COUNTRY).find((c) => c.name === name);
+      const colors = country ? CONTINENT_COLORS[country.continent] : null;
+      return colors
+        ? { fill: colors.visited, stroke: colors.stroke }
+        : { fill: "#4ade80", stroke: "#22c55e" };
+    }
+    return dark ? DEFAULT_COLOR : DEFAULT_COLOR_LIGHT;
+  }
+
+  function updateStyles(features, vis, buck, hl, g, dark) {
     g.selectAll("path.country-path")
       .attr("fill", (d) => {
         const id = String(d.id).padStart(3, "0");
         const country = ID_TO_COUNTRY[id];
-        if (!country) return "#1a2233";
-        const name = country.name;
-        if (hl === name) return "#60a5fa";
-        if (vis.includes(name)) return "#4ade80";
-        if (buck.includes(name)) return "#fbbf24";
-        return "#1e2d42";
+        if (!country) return dark ? "#1a2233" : "#e2e8f0";
+        return getColor(country.name, vis, buck, hl, dark).fill;
       })
       .attr("stroke", (d) => {
         const id = String(d.id).padStart(3, "0");
         const country = ID_TO_COUNTRY[id];
-        if (!country) return "#0d1520";
-        const name = country.name;
-        if (hl === name) return "#93c5fd";
-        if (vis.includes(name)) return "#22c55e";
-        if (buck.includes(name)) return "#f59e0b";
-        return "#0d1520";
+        if (!country) return dark ? "#0d1520" : "#fff";
+        return getColor(country.name, vis, buck, hl, dark).stroke;
       })
-      .attr("stroke-width", (d) => {
-        const id = String(d.id).padStart(3, "0");
-        const country = ID_TO_COUNTRY[id];
-        if (!country) return 0.4;
-        const name = country.name;
-        return hl === name || vis.includes(name) || buck.includes(name)
-          ? 0.8
-          : 0.4;
-      })
+      .attr("stroke-width", 0.5)
       .style("cursor", "pointer");
+  }
+
+  function handleToggleVisited(name) {
+    if (!visited.includes(name)) playSound();
+    toggleVisited(name);
+    setCtx(null);
+  }
+
+  function handleToggleBucket(name) {
+    if (!bucketlist.includes(name)) playSound();
+    toggleBucket(name);
+    setCtx(null);
   }
 
   return (
@@ -167,10 +239,7 @@ export default function WorldMap({
             className={`ctx-item ${
               visited.includes(ctx.name) ? "active-visited" : ""
             }`}
-            onClick={() => {
-              toggleVisited(ctx.name);
-              setCtx(null);
-            }}
+            onClick={() => handleToggleVisited(ctx.name)}
           >
             <svg
               width="14"
@@ -190,10 +259,7 @@ export default function WorldMap({
             className={`ctx-item ${
               bucketlist.includes(ctx.name) ? "active-bucket" : ""
             }`}
-            onClick={() => {
-              toggleBucket(ctx.name);
-              setCtx(null);
-            }}
+            onClick={() => handleToggleBucket(ctx.name)}
           >
             <svg
               width="14"
@@ -209,21 +275,52 @@ export default function WorldMap({
               ? "Verwijder uit bucketlist"
               : "Voeg toe aan bucketlist"}
           </button>
+          <button
+            className="ctx-item"
+            onClick={() => {
+              const svg = d3.select(svgRef.current);
+              svg
+                .transition()
+                .duration(500)
+                .call(zoomRef.current.transform, d3.zoomIdentity);
+              setCtx(null);
+            }}
+          >
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 16 16"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+            >
+              <path d="M3 8h10M8 3l5 5-5 5" />
+            </svg>
+            Zoom terug
+          </button>
         </div>
       )}
 
       <div className="map-legend">
-        <div className="legend-item">
-          <span className="legend-dot" style={{ background: "#4ade80" }}></span>
-          Bezocht
-        </div>
-        <div className="legend-item">
+        {Object.entries(CONTINENT_COLORS).map(([cont, colors]) => (
+          <div key={cont} className="legend-item">
+            <span
+              className="legend-dot"
+              style={{ background: colors.visited }}
+            ></span>
+            {cont}
+          </div>
+        ))}
+        <div
+          className="legend-item"
+          style={{
+            marginTop: 6,
+            borderTop: "1px solid rgba(128,128,128,0.2)",
+            paddingTop: 6,
+          }}
+        >
           <span className="legend-dot" style={{ background: "#fbbf24" }}></span>
           Bucketlist
-        </div>
-        <div className="legend-item">
-          <span className="legend-dot" style={{ background: "#1e2d42" }}></span>
-          Niet bezocht
         </div>
       </div>
 
