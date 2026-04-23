@@ -294,7 +294,7 @@ export default function WorldMap({
               stroke="currentColor"
               strokeWidth="1.5"
             >
-              <path d="M3 8h10M8 3l5 5-5 5" />
+              <path d="M8 3v10M3 8l5-5 5 5" />
             </svg>
             Zoom terug
           </button>
