@@ -17,6 +17,11 @@ export default function App() {
   const [page, setPage] = useState("map");
   const [search, setSearch] = useState("");
   const [highlighted, setHighlighted] = useState(null);
+  const [darkMode, setDarkMode] = useState(false);
+
+  useEffect(() => {
+    document.body.setAttribute("data-theme", darkMode ? "dark" : "light");
+  }, [darkMode]);
 
   useEffect(() => {
     localStorage.setItem("traveltracker-visited", JSON.stringify(visited));
@@ -55,6 +60,8 @@ export default function App() {
         setPage={setPage}
         toggleVisited={toggleVisited}
         toggleBucket={toggleBucket}
+        darkMode={darkMode}
+        setDarkMode={setDarkMode}
       />
       <div className="main">
         <Topbar
@@ -71,6 +78,7 @@ export default function App() {
             highlighted={highlighted}
             toggleVisited={toggleVisited}
             toggleBucket={toggleBucket}
+            darkMode={darkMode}
           />
         ) : (
           <StatsPage visited={visited} bucketlist={bucketlist} />
