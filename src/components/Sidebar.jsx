@@ -10,6 +10,8 @@ export default function Sidebar({
   setPage,
   toggleVisited,
   toggleBucket,
+  darkMode,
+  setDarkMode,
 }) {
   const [tab, setTab] = useState("visited");
 
@@ -156,6 +158,27 @@ export default function Sidebar({
           </div>
         ))}
       </div>
+
+      <button
+        onClick={() => setDarkMode(!darkMode)}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+          width: "100%",
+          padding: "10px 20px",
+          background: "transparent",
+          border: "none",
+          borderTop: "1px solid var(--border)",
+          color: "var(--text2)",
+          fontSize: 12,
+          cursor: "pointer",
+          fontFamily: "DM Sans, sans-serif",
+          transition: "color 0.15s",
+        }}
+      >
+        {darkMode ? "☀️  Light mode" : "🌙  Dark mode"}
+      </button>
 
       <div className="sidebar-stats">
         <div className="progress-label">
