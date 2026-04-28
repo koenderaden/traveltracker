@@ -132,7 +132,6 @@ export default function Sidebar({
         )}
         {list.map((c) => (
           <div key={c.id} className="country-row">
-            <span style={{ fontSize: 16 }}>{c.flag}</span>
             <div style={{ flex: 1 }}>
               <div className="name">{c.name}</div>
               <div className="cont">{c.continent}</div>

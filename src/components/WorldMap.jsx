@@ -19,6 +19,21 @@ const BUCKET_COLOR = { fill: "#fbbf24", stroke: "#f59e0b" };
 const DEFAULT_COLOR = { fill: "#1e2d42", stroke: "#0d1520" };
 const DEFAULT_COLOR_LIGHT = { fill: "#cbd5e1", stroke: "#94a3b8" };
 
+// Overzeese gebieden die apart moeten blijven
+const OVERSEAS = {
+  254: "Frankrijk", // Frans Guyana
+  474: "Frankrijk", // Martinique
+  312: "Frankrijk", // Guadeloupe
+  638: "Frankrijk", // Réunion
+  175: "Frankrijk", // Mayotte
+  663: "Frankrijk", // Sint-Maarten
+  534: "Nederland", // Sint Maarten
+  535: "Nederland", // Bonaire
+  533: "Nederland", // Aruba
+  540: "Frankrijk", // Nieuw-Caledonië
+  258: "Frankrijk", // Frans-Polynesië
+};
+
 function playSound() {
   try {
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -104,6 +119,10 @@ export default function WorldMap({
         .on("click", function (event, d) {
           event.stopPropagation();
           const id = String(d.id).padStart(3, "0");
+
+          // Overzeese gebieden negeren
+          if (OVERSEAS[id]) return;
+
           const country = ID_TO_COUNTRY[id];
           if (!country) return;
 
@@ -111,8 +130,8 @@ export default function WorldMap({
           setCtx({
             name: country.name,
             flag: country.flag,
-            x: Math.min(event.clientX - rect.left, rect.width - 200),
-            y: Math.min(event.clientY - rect.top, rect.height - 120),
+            x: Math.min(event.clientX - rect.left, rect.width - 210),
+            y: Math.min(event.clientY - rect.top, rect.height - 160),
           });
           setTooltip(null);
 
@@ -174,18 +193,23 @@ export default function WorldMap({
     g.selectAll("path.country-path")
       .attr("fill", (d) => {
         const id = String(d.id).padStart(3, "0");
+        if (OVERSEAS[id]) return dark ? "#1a2233" : "#e2e8f0";
         const country = ID_TO_COUNTRY[id];
         if (!country) return dark ? "#1a2233" : "#e2e8f0";
         return getColor(country.name, vis, buck, hl, dark).fill;
       })
       .attr("stroke", (d) => {
         const id = String(d.id).padStart(3, "0");
+        if (OVERSEAS[id]) return dark ? "#0d1520" : "#fff";
         const country = ID_TO_COUNTRY[id];
         if (!country) return dark ? "#0d1520" : "#fff";
         return getColor(country.name, vis, buck, hl, dark).stroke;
       })
       .attr("stroke-width", 0.5)
-      .style("cursor", "pointer");
+      .style("cursor", (d) => {
+        const id = String(d.id).padStart(3, "0");
+        return OVERSEAS[id] ? "default" : "pointer";
+      });
   }
 
   function handleToggleVisited(name) {
@@ -212,10 +236,8 @@ export default function WorldMap({
           className="map-tooltip"
           style={{ left: tooltip.x + 14, top: tooltip.y - 20 }}
         >
-          <div className="tooltip-name">
-            <span style={{ fontSize: 16, marginRight: 6 }}>{tooltip.flag}</span>
-            {tooltip.name}
-          </div>
+          <div className="tooltip-name">{tooltip.name}</div>
+
           <div className="tooltip-actions">
             {tooltip.visited && (
               <span className="tooltip-tag tag-visited">Bezocht</span>
@@ -232,28 +254,17 @@ export default function WorldMap({
 
       {ctx && (
         <div className="ctx-menu" style={{ left: ctx.x, top: ctx.y }}>
-          <div className="ctx-header">
-            {ctx.flag} {ctx.name}
-          </div>
+          <div className="ctx-header">{ctx.name}</div>
           <button
             className={`ctx-item ${
               visited.includes(ctx.name) ? "active-visited" : ""
             }`}
             onClick={() => handleToggleVisited(ctx.name)}
           >
-            <svg
-              width="14"
-              height="14"
-              viewBox="0 0 16 16"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.5"
-            >
-              <path d="M3 8l3.5 3.5L13 4" />
-            </svg>
+            <span style={{ fontSize: 16 }}>✈️</span>
             {visited.includes(ctx.name)
               ? "Verwijder uit bezocht"
-              : "Markeer als bezocht"}
+              : "Ik ben hier geweest!"}
           </button>
           <button
             className={`ctx-item ${
@@ -261,19 +272,10 @@ export default function WorldMap({
             }`}
             onClick={() => handleToggleBucket(ctx.name)}
           >
-            <svg
-              width="14"
-              height="14"
-              viewBox="0 0 16 16"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.5"
-            >
-              <path d="M8 2l1.5 3.5L13 6l-2.5 2.5.5 3.5L8 10.5 5 12l.5-3.5L3 6l3.5-.5z" />
-            </svg>
+            <span style={{ fontSize: 16 }}>🌟</span>
             {bucketlist.includes(ctx.name)
               ? "Verwijder uit bucketlist"
-              : "Voeg toe aan bucketlist"}
+              : "Wil ik naartoe!"}
           </button>
           <button
             className="ctx-item"
@@ -286,16 +288,7 @@ export default function WorldMap({
               setCtx(null);
             }}
           >
-            <svg
-              width="14"
-              height="14"
-              viewBox="0 0 16 16"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.5"
-            >
-              <path d="M8 3v10M3 8l5-5 5 5" />
-            </svg>
+            <span style={{ fontSize: 16 }}>🔍</span>
             Zoom terug
           </button>
         </div>
