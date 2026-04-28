@@ -19,19 +19,18 @@ const BUCKET_COLOR = { fill: "#fbbf24", stroke: "#f59e0b" };
 const DEFAULT_COLOR = { fill: "#1e2d42", stroke: "#0d1520" };
 const DEFAULT_COLOR_LIGHT = { fill: "#cbd5e1", stroke: "#94a3b8" };
 
-// Overzeese gebieden die apart moeten blijven
 const OVERSEAS = {
-  254: "Frankrijk", // Frans Guyana
-  474: "Frankrijk", // Martinique
-  312: "Frankrijk", // Guadeloupe
-  638: "Frankrijk", // Réunion
-  175: "Frankrijk", // Mayotte
-  663: "Frankrijk", // Sint-Maarten
-  534: "Nederland", // Sint Maarten
-  535: "Nederland", // Bonaire
-  533: "Nederland", // Aruba
-  540: "Frankrijk", // Nieuw-Caledonië
-  258: "Frankrijk", // Frans-Polynesië
+  254: "Frankrijk",
+  474: "Frankrijk",
+  312: "Frankrijk",
+  638: "Frankrijk",
+  175: "Frankrijk",
+  663: "Frankrijk",
+  534: "Nederland",
+  535: "Nederland",
+  533: "Nederland",
+  540: "Frankrijk",
+  258: "Frankrijk",
 };
 
 function playSound() {
@@ -103,33 +102,27 @@ export default function WorldMap({
         .attr("data-id", (d) => String(d.id).padStart(3, "0"))
         .on("mousemove", function (event, d) {
           const id = String(d.id).padStart(3, "0");
+          if (OVERSEAS[id]) return;
           const country = ID_TO_COUNTRY[id];
           if (!country) return;
           const rect = svgRef.current.getBoundingClientRect();
           setTooltip({
             name: country.name,
-            flag: country.flag,
             x: event.clientX - rect.left,
             y: event.clientY - rect.top,
-            visited: visited.includes(country.name),
-            bucket: bucketlist.includes(country.name),
           });
         })
         .on("mouseleave", () => setTooltip(null))
         .on("click", function (event, d) {
           event.stopPropagation();
           const id = String(d.id).padStart(3, "0");
-
-          // Overzeese gebieden negeren
           if (OVERSEAS[id]) return;
-
           const country = ID_TO_COUNTRY[id];
           if (!country) return;
 
           const rect = svgRef.current.getBoundingClientRect();
           setCtx({
             name: country.name,
-            flag: country.flag,
             x: Math.min(event.clientX - rect.left, rect.width - 210),
             y: Math.min(event.clientY - rect.top, rect.height - 160),
           });
@@ -237,17 +230,17 @@ export default function WorldMap({
           style={{ left: tooltip.x + 14, top: tooltip.y - 20 }}
         >
           <div className="tooltip-name">{tooltip.name}</div>
-
           <div className="tooltip-actions">
-            {tooltip.visited && (
+            {visited.includes(tooltip.name) && (
               <span className="tooltip-tag tag-visited">Bezocht</span>
             )}
-            {tooltip.bucket && (
+            {bucketlist.includes(tooltip.name) && (
               <span className="tooltip-tag tag-bucket">Bucketlist</span>
             )}
-            {!tooltip.visited && !tooltip.bucket && (
-              <span className="tooltip-tag tag-none">Klik voor opties</span>
-            )}
+            {!visited.includes(tooltip.name) &&
+              !bucketlist.includes(tooltip.name) && (
+                <span className="tooltip-tag tag-none">Klik voor opties</span>
+              )}
           </div>
         </div>
       )}
