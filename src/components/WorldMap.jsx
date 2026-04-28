@@ -71,10 +71,11 @@ export default function WorldMap({
 
     svg.selectAll("*").remove();
 
+    const isMobile = width < 500;
     const projection = d3
       .geoNaturalEarth1()
-      .scale(width / 6.2)
-      .translate([width / 2, height / 2]);
+      .scale(isMobile ? width / 4 : width / 6.2)
+      .translate([width / 2, isMobile ? height / 2.5 : height / 2]);
 
     const path = d3.geoPath(projection);
     const g = svg.append("g");
